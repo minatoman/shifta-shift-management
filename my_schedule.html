@@ -1,0 +1,911 @@
+{% extends "schedule/base.html" %}
+
+{% block title %}マイスケジュール - Shifta{% endblock %}
+
+{% block header_title %}マイスケジュール{% endblock %}
+
+{% block header_actions %}
+<div class="dropdown">
+  <button class="btn btn-link text-white" data-bs-toggle="dropdown">
+    <i class="bi bi-three-dots-vertical"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><a class="dropdown-item" href="#" onclick="exportSchedule()">
+      <i class="bi bi-download"></i> カレンダーアプリに追加
+    </a></li>
+    <li><a class="dropdown-item" href="#" onclick="shareSchedule()">
+      <i class="bi bi-share"></i> スケジュール共有
+    </a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="{% url 'schedule:holiday_balance' %}">
+      <i class="bi bi-clock-history"></i> 休日残数確認
+    </a></li>
+  </ul>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .month-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    position: sticky;
+    top: 80px; /* ヘッダーの下 */
+    z-index: 100;
+  }
+  
+  .month-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  
+  .month-nav-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+  
+  .month-nav-btn:hover {
+    background: rgba(255,255,255,0.3);
+    color: white;
+    transform: scale(1.1);
+  }
+  
+  .month-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+  }
+  
+  .month-stats {
+    font-size: 0.9rem;
+    opacity: 0.9;
+  }
+  
+  .view-toggle {
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 0.25rem;
+    margin-top: 0.5rem;
+  }
+  
+  .view-toggle .nav-link {
+    color: rgba(255,255,255,0.8);
+    border-radius: 16px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+  }
+  
+  .view-toggle .nav-link.active {
+    background: white;
+    color: #667eea;
+    font-weight: 600;
+  }
+  
+  .schedule-item {
+    border: none;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+  }
+  
+  .schedule-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .schedule-item.workday {
+    background: linear-gradient(45deg, #e6fffa, #f0fff4);
+    border-left: 4px solid #38a169;
+  }
+  
+  .schedule-item.holiday {
+    background: linear-gradient(45deg, #fed7d7, #feebc8);
+    border-left: 4px solid #e53e3e;
+  }
+  
+  .date-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  
+  .date-text {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #2d3748;
+  }
+  
+  .weekday {
+    font-size: 0.9rem;
+    color: #718096;
+    margin-left: 0.5rem;
+  }
+  
+  .weekday.sunday { color: #e53e3e; }
+  .weekday.saturday { color: #3182ce; }
+  
+  .status-badge {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.6rem;
+    border-radius: 20px;
+  }
+  
+  .status-badge.work {
+    background: #38a169;
+    color: white;
+  }
+  
+  .status-badge.holiday {
+    background: #e53e3e;
+    color: white;
+  }
+  
+  .schedule-details {
+    font-size: 0.9rem;
+    color: #4a5568;
+  }
+  
+  .compact-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  
+  .compact-day {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .compact-day:hover {
+    transform: scale(1.1);
+  }
+  
+  .compact-day.workday {
+    background: #38a169;
+    color: white;
+  }
+  
+  .compact-day.holiday {
+    background: #e53e3e;
+    color: white;
+  }
+  
+  .compact-day.today {
+    border: 2px solid #667eea;
+    font-weight: 700;
+  }
+  
+  .calendar-weekday {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #718096;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+  
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .summary-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .summary-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #667eea;
+    display: block;
+  }
+  
+  .summary-label {
+    font-size: 0.9rem;
+    color: #718096;
+    margin-top: 0.25rem;
+  }
+  
+  .holiday-balance-card {
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: #744210;
+  }
+  
+  .balance-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .balance-item {
+    text-align: center;
+    background: rgba(255,255,255,0.3);
+    border-radius: 8px;
+    padding: 0.75rem;
+  }
+  
+  .balance-number {
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: block;
+  }
+  
+  .balance-label {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+  }
+  
+  .quick-actions {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    z-index: 1000;
+  }
+  
+  .quick-action-fab {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    color: white;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .quick-action-fab:hover {
+    transform: scale(1.1);
+    color: white;
+  }
+  
+  .fab-primary {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+  }
+  
+  .fab-success {
+    background: linear-gradient(45deg, #38a169, #48bb78);
+  }
+  
+  .fab-warning {
+    background: linear-gradient(45deg, #d69e2e, #f6e05e);
+  }
+  
+  .loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 8px;
+    height: 80px;
+    margin-bottom: 0.5rem;
+  }
+  
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #718096;
+  }
+  
+  .empty-state i {
+    font-size: 3rem;
+    color: #cbd5e0;
+    margin-bottom: 1rem;
+  }
+  
+  /* プルツーリフレッシュ強化 */
+  .refresh-indicator {
+    text-align: center;
+    padding: 1rem;
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  
+  .refresh-indicator.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 月間ヘッダー -->
+<div class="month-header">
+  <div class="month-navigation">
+    <button class="month-nav-btn" onclick="changeMonth(-1)">
+      <i class="bi bi-chevron-left"></i>
+    </button>
+    <div>
+      <h3 class="month-title" id="currentMonth">{{ current_month|date:"Y年n月" }}</h3>
+      <div class="month-stats">
+        勤務: {{ monthly_stats.work_days }}日 | 休み: {{ monthly_stats.holiday_days }}日
+      </div>
+    </div>
+    <button class="month-nav-btn" onclick="changeMonth(1)">
+      <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+  
+  <!-- 表示切替タブ -->
+  <div class="view-toggle">
+    <ul class="nav nav-pills nav-fill" id="viewTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="list-tab" data-bs-toggle="pill" data-bs-target="#list-view">
+          <i class="bi bi-list-ul"></i> リスト
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="calendar-tab" data-bs-toggle="pill" data-bs-target="#calendar-view">
+          <i class="bi bi-calendar3"></i> カレンダー
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- リフレッシュインジケーター -->
+<div class="refresh-indicator" id="refreshIndicator">
+  <i class="bi bi-arrow-clockwise"></i>
+  スケジュールを更新中...
+</div>
+
+<!-- サマリーカード -->
+<div class="summary-cards">
+  <div class="summary-card">
+    <span class="summary-number">{{ monthly_stats.work_days }}</span>
+    <div class="summary-label">今月の勤務日数</div>
+  </div>
+  <div class="summary-card">
+    <span class="summary-number">{{ monthly_stats.remaining_days }}</span>
+    <div class="summary-label">今月の残り日数</div>
+  </div>
+</div>
+
+<!-- 休日残数カード -->
+{% if holiday_balances %}
+<div class="holiday-balance-card">
+  <h6 class="mb-0">
+    <i class="bi bi-clock-history"></i>
+    休日残数
+  </h6>
+  <div class="balance-grid">
+    {% for balance in holiday_balances %}
+    <div class="balance-item">
+      <span class="balance-number">{{ balance.balance|floatformat:1 }}</span>
+      <div class="balance-label">{{ balance.holiday_type.name }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- タブコンテンツ -->
+<div class="tab-content" id="viewTabContent">
+  <!-- リスト表示 -->
+  <div class="tab-pane fade show active" id="list-view" role="tabpanel">
+    <div id="scheduleList">
+      {% if assignments %}
+        {% regroup assignments by date.month as monthly_assignments %}
+        {% for month_group in monthly_assignments %}
+          {% for assignment in month_group.list %}
+            <div class="list-group-item schedule-item {% if assignment.is_workday %}workday{% else %}holiday{% endif %}" 
+                 data-date="{{ assignment.date|date:'Y-m-d' }}">
+              <div class="date-info">
+                <div>
+                  <span class="date-text">{{ assignment.date|date:"n月j日" }}</span>
+                  <span class="weekday {% if assignment.date|date:'w' == '0' %}sunday{% elif assignment.date|date:'w' == '6' %}saturday{% endif %}">
+                    ({{ assignment.date|date:"D" }})
+                  </span>
+                </div>
+                <span class="status-badge {% if assignment.is_workday %}work{% else %}holiday{% endif %}">
+                  {% if assignment.is_workday %}勤務{% else %}休み{% endif %}
+                </span>
+              </div>
+              
+              {% if not assignment.is_workday and assignment.holiday_type %}
+                <div class="schedule-details">
+                  <i class="bi bi-info-circle"></i>
+                  {{ assignment.holiday_type.name }}
+                </div>
+              {% endif %}
+              
+              {% if assignment.notes %}
+                <div class="schedule-details">
+                  <i class="bi bi-chat-left-text"></i>
+                  {{ assignment.notes }}
+                </div>
+              {% endif %}
+              
+              <div class="schedule-details">
+                <small class="text-muted">
+                  {% if assignment.manually_adjusted %}
+                    <i class="bi bi-pencil"></i> 手動調整済み
+                  {% elif assignment.created_by_ai %}
+                    <i class="bi bi-robot"></i> AI作成
+                  {% endif %}
+                  | {{ assignment.updated_at|date:"n/j H:i" }}更新
+                </small>
+              </div>
+            </div>
+          {% endfor %}
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <i class="bi bi-calendar-x"></i>
+          <h5>スケジュールがありません</h5>
+          <p>まだシフトが確定していません。<br>管理者による作成をお待ちください。</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- カレンダー表示 -->
+  <div class="tab-pane fade" id="calendar-view" role="tabpanel">
+    <!-- 曜日ヘッダー -->
+    <div class="compact-calendar">
+      <div class="calendar-weekday">日</div>
+      <div class="calendar-weekday">月</div>
+      <div class="calendar-weekday">火</div>
+      <div class="calendar-weekday">水</div>
+      <div class="calendar-weekday">木</div>
+      <div class="calendar-weekday">金</div>
+      <div class="calendar-weekday">土</div>
+    </div>
+    
+    <!-- カレンダーグリッド -->
+    <div class="compact-calendar" id="calendarGrid">
+      <!-- JavaScript で動的に生成 -->
+    </div>
+  </div>
+</div>
+
+<!-- クイックアクション -->
+<div class="quick-actions">
+  <button class="quick-action-fab fab-warning" onclick="showHolidayBalance()" title="休日残数">
+    <i class="bi bi-clock-history"></i>
+  </button>
+  <button class="quick-action-fab fab-success" onclick="requestShift()" title="希望提出">
+    <i class="bi bi-calendar-plus"></i>
+  </button>
+  <button class="quick-action-fab fab-primary" onclick="scrollToToday()" title="今日へ移動">
+    <i class="bi bi-calendar-day"></i>
+  </button>
+</div>
+
+<!-- 詳細モーダル -->
+<div class="modal fade" id="scheduleDetailModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">スケジュール詳細</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- JavaScript で動的に内容を設定 -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentDate = new Date('{{ current_month|date:"Y-m-d" }}');
+let scheduleData = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+  // スケジュールデータの初期化
+  loadScheduleData();
+  
+  // カレンダービューの初期化
+  initializeCalendarView();
+  
+  // イベントリスナーの設定
+  setupEventListeners();
+  
+  // 今日の日付をハイライト
+  highlightToday();
+  
+  // プルツーリフレッシュの設定
+  setupPullToRefresh();
+});
+
+function loadScheduleData() {
+  {% for assignment in assignments %}
+    scheduleData['{{ assignment.date|date:"Y-m-d" }}'] = {
+      isWorkday: {{ assignment.is_workday|yesno:"true,false" }},
+      holidayType: '{{ assignment.holiday_type.name|default:"" }}',
+      notes: '{{ assignment.notes|default:"" }}',
+      manuallyAdjusted: {{ assignment.manually_adjusted|yesno:"true,false" }},
+      createdByAi: {{ assignment.created_by_ai|yesno:"true,false" }},
+      updatedAt: '{{ assignment.updated_at|date:"Y-m-d H:i" }}'
+    };
+  {% endfor %}
+}
+
+function initializeCalendarView() {
+  const calendarGrid = document.getElementById('calendarGrid');
+  calendarGrid.innerHTML = '';
+  
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  
+  // 月の最初の日と最後の日
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  
+  // 最初の週の開始日（前月の日付を含む）
+  const startDate = new Date(firstDay);
+  startDate.setDate(startDate.getDate() - firstDay.getDay());
+  
+  // カレンダーの6週間分を生成
+  for (let week = 0; week < 6; week++) {
+    for (let day = 0; day < 7; day++) {
+      const currentDay = new Date(startDate);
+      currentDay.setDate(startDate.getDate() + (week * 7) + day);
+      
+      const dayElement = createCalendarDay(currentDay, month);
+      calendarGrid.appendChild(dayElement);
+    }
+  }
+}
+
+function createCalendarDay(date, currentMonth) {
+  const dayDiv = document.createElement('div');
+  const dateStr = date.toISOString().split('T')[0];
+  const isCurrentMonth = date.getMonth() === currentMonth;
+  const isToday = date.toDateString() === new Date().toDateString();
+  
+  dayDiv.className = 'compact-day';
+  dayDiv.textContent = date.getDate();
+  dayDiv.dataset.date = dateStr;
+  
+  if (!isCurrentMonth) {
+    dayDiv.style.opacity = '0.3';
+    return dayDiv;
+  }
+  
+  if (isToday) {
+    dayDiv.classList.add('today');
+  }
+  
+  const schedule = scheduleData[dateStr];
+  if (schedule) {
+    if (schedule.isWorkday) {
+      dayDiv.classList.add('workday');
+      dayDiv.title = `勤務日`;
+    } else {
+      dayDiv.classList.add('holiday');
+      dayDiv.title = `休み${schedule.holidayType ? ` (${schedule.holidayType})` : ''}`;
+    }
+  }
+  
+  dayDiv.addEventListener('click', function() {
+    showScheduleDetail(dateStr);
+  });
+  
+  return dayDiv;
+}
+
+function showScheduleDetail(dateStr) {
+  const date = new Date(dateStr);
+  const schedule = scheduleData[dateStr];
+  
+  document.getElementById('modalTitle').textContent = 
+    `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日のスケジュール`;
+  
+  let bodyContent = '';
+  
+  if (schedule) {
+    bodyContent = `
+      <div class="mb-3">
+        <h6>ステータス</h6>
+        <span class="badge ${schedule.isWorkday ? 'bg-success' : 'bg-danger'}">
+          ${schedule.isWorkday ? '勤務日' : '休日'}
+        </span>
+      </div>
+    `;
+    
+    if (!schedule.isWorkday && schedule.holidayType) {
+      bodyContent += `
+        <div class="mb-3">
+          <h6>休日種別</h6>
+          <p>${schedule.holidayType}</p>
+        </div>
+      `;
+    }
+    
+    if (schedule.notes) {
+      bodyContent += `
+        <div class="mb-3">
+          <h6>備考</h6>
+          <p>${schedule.notes}</p>
+        </div>
+      `;
+    }
+    
+    bodyContent += `
+      <div class="mb-3">
+        <h6>作成情報</h6>
+        <p class="text-muted small">
+          ${schedule.createdByAi ? 'AI自動作成' : '手動作成'}
+          ${schedule.manuallyAdjusted ? ' (手動調整済み)' : ''}
+          <br>
+          最終更新: ${schedule.updatedAt}
+        </p>
+      </div>
+    `;
+  } else {
+    bodyContent = '<p class="text-muted">この日のスケジュールは未確定です。</p>';
+  }
+  
+  document.getElementById('modalBody').innerHTML = bodyContent;
+  
+  new bootstrap.Modal(document.getElementById('scheduleDetailModal')).show();
+}
+
+function changeMonth(direction) {
+  currentDate.setMonth(currentDate.getMonth() + direction);
+  
+  // ヘッダーのタイトル更新
+  document.getElementById('currentMonth').textContent = 
+    `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月`;
+  
+  // 新しい月のデータを読み込み
+  loadMonthData(currentDate);
+}
+
+function loadMonthData(date) {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  
+  // ローディング表示
+  showLoadingSkeletons();
+  
+  fetch(`/api/schedule/monthly/?year=${year}&month=${month}`)
+    .then(response => response.json())
+    .then(data => {
+      // スケジュールデータの更新
+      scheduleData = data.assignments || {};
+      
+      // ビューの更新
+      updateViews();
+      
+      // 統計情報の更新
+      updateMonthlyStats(data.stats);
+    })
+    .catch(error => {
+      console.error('月間データ読み込みエラー:', error);
+      showErrorMessage('データの読み込みに失敗しました。');
+    });
+}
+
+function showLoadingSkeletons() {
+  const listView = document.getElementById('scheduleList');
+  listView.innerHTML = '';
+  
+  for (let i = 0; i < 5; i++) {
+    const skeleton = document.createElement('div');
+    skeleton.className = 'loading-skeleton';
+    listView.appendChild(skeleton);
+  }
+}
+
+function updateViews() {
+  // リストビューの更新
+  updateListView();
+  
+  // カレンダービューの更新
+  initializeCalendarView();
+}
+
+function updateListView() {
+  // 実装はサーバーサイドレンダリングに依存
+  // 必要に応じてAjaxで部分更新
+}
+
+function updateMonthlyStats(stats) {
+  if (stats) {
+    document.querySelector('.summary-number').textContent = stats.work_days || 0;
+    // その他の統計情報も更新
+  }
+}
+
+function setupEventListeners() {
+  // スケジュール項目のクリックイベント
+  document.addEventListener('click', function(e) {
+    const scheduleItem = e.target.closest('.schedule-item');
+    if (scheduleItem) {
+      const dateStr = scheduleItem.dataset.date;
+      showScheduleDetail(dateStr);
+    }
+  });
+  
+  // タブ切り替え時の処理
+  document.querySelectorAll('[data-bs-toggle="pill"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function(e) {
+      if (e.target.id === 'calendar-tab') {
+        // カレンダータブが表示された時の処理
+        setTimeout(() => {
+          highlightToday();
+        }, 100);
+      }
+    });
+  });
+}
+
+function highlightToday() {
+  const today = new Date().toISOString().split('T')[0];
+  const todayElements = document.querySelectorAll(`[data-date="${today}"]`);
+  
+  todayElements.forEach(element => {
+    if (element.classList.contains('compact-day')) {
+      element.classList.add('today');
+    } else if (element.classList.contains('schedule-item')) {
+      element.style.border = '2px solid #667eea';
+    }
+  });
+}
+
+function scrollToToday() {
+  const today = new Date().toISOString().split('T')[0];
+  const todayElement = document.querySelector(`[data-date="${today}"]`);
+  
+  if (todayElement) {
+    todayElement.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+    
+    // 一時的にハイライト
+    todayElement.style.animation = 'pulse 1s ease-in-out 2';
+  } else {
+    // 今日の日付が現在の月にない場合、今月に移動
+    const today = new Date();
+    if (today.getMonth() !== currentDate.getMonth() || 
+        today.getFullYear() !== currentDate.getFullYear()) {
+      currentDate = new Date(today);
+      loadMonthData(currentDate);
+    }
+  }
+}
+
+function requestShift() {
+  window.location.href = '{% url "schedule:shift_request" %}';
+}
+
+function showHolidayBalance() {
+  window.location.href = '{% url "schedule:holiday_balance" %}';
+}
+
+function exportSchedule() {
+  if (confirm('スケジュールをカレンダーアプリに追加しますか？')) {
+    window.location.href = `/api/schedule/export/ical/?month=${currentDate.getMonth() + 1}&year=${currentDate.getFullYear()}`;
+  }
+}
+
+function shareSchedule() {
+  const month = currentDate.getMonth() + 1;
+  const year = currentDate.getFullYear();
+  const url = `${window.location.origin}/schedule/public/${year}/${month}/`;
+  
+  if (navigator.share) {
+    navigator.share({
+      title: `${year}年${month}月のスケジュール`,
+      text: 'マイスケジュールを共有します',
+      url: url
+    });
+  } else {
+    // フォールバック: クリップボードにコピー
+    navigator.clipboard.writeText(url).then(() => {
+      alert('URLをクリップボードにコピーしました。');
+    });
+  }
+}
+
+function setupPullToRefresh() {
+  let startY = 0;
+  let currentY = 0;
+  let isPulling = false;
+  
+  document.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].clientY;
+  });
+  
+  document.addEventListener('touchmove', function(e) {
+    currentY = e.touches[0].clientY;
+    const pullDistance = currentY - startY;
+    
+    if (pullDistance > 100 && window.scrollY === 0 && !isPulling) {
+      isPulling = true;
+      document.getElementById('refreshIndicator').classList.add('active');
+    }
+  });
+  
+  document.addEventListener('touchend', function(e) {
+    if (isPulling) {
+      setTimeout(() => {
+        location.reload();
+      }, 500);
+    }
+  });
+}
+
+function showErrorMessage(message) {
+  const alert = document.createElement('div');
+  alert.className = 'alert alert-danger alert-dismissible fade show';
+  alert.innerHTML = `
+    <i class="bi bi-exclamation-triangle"></i>
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.querySelector('main').prepend(alert);
+  
+  setTimeout(() => {
+    alert.remove();
+  }, 5000);
+}
+
+// ページ表示時の自動更新チェック
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) {
+    // 最後の更新から5分以上経過していたら自動更新
+    const lastUpdate = localStorage.getItem('lastScheduleUpdate');
+    if (!lastUpdate || Date.now() - parseInt(lastUpdate) > 300000) {
+      loadMonthData(currentDate);
+      localStorage.setItem('lastScheduleUpdate', Date.now().toString());
+    }
+  }
+});
+</script>
+{% endblock %}

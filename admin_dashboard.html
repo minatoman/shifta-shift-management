@@ -1,0 +1,497 @@
+{% extends "schedule/base.html" %}
+
+{% block title %}管理者ダッシュボード - Shifta{% endblock %}
+
+{% block header_title %}管理者ダッシュボード{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* PC用管理者画面のスタイル */
+  @media (min-width: 768px) {
+    .container {
+      max-width: 1200px;
+    }
+    
+    .admin-sidebar {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+      height: fit-content;
+      position: sticky;
+      top: 2rem;
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border: none;
+      transition: transform 0.2s ease;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-2px);
+    }
+    
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    
+    .ai-action-card {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      border: none;
+    }
+    
+    .progress-ring {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 1rem;
+    }
+    
+    .progress-ring circle {
+      fill: transparent;
+      stroke: rgba(255,255,255,0.3);
+      stroke-width: 8;
+      stroke-dasharray: 283;
+      stroke-dashoffset: 283;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+    
+    .progress-ring .progress {
+      stroke: white;
+    }
+  }
+  
+  .status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+  }
+  
+  .status-active { background-color: #28a745; }
+  .status-pending { background-color: #ffc107; }
+  .status-error { background-color: #dc3545; }
+  
+  .quick-action-btn {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    margin: 0.25rem;
+    transition: all 0.2s ease;
+  }
+  
+  .quick-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    color: white;
+  }
+  
+  .ai-status {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+  
+  .ai-status.running {
+    background: linear-gradient(45deg, #17a2b8, #20c997);
+    color: white;
+  }
+  
+  .ai-status.complete {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+  }
+  
+  .ai-status.error {
+    background: linear-gradient(45deg, #dc3545, #fd7e14);
+    color: white;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- サイドバー（PC用） -->
+  <div class="col-lg-3 d-none d-lg-block">
+    <div class="admin-sidebar">
+      <h5 class="mb-3">
+        <i class="bi bi-speedometer2"></i>
+        管理メニュー
+      </h5>
+      
+      <div class="list-group list-group-flush">
+        <a href="{% url 'schedule:admin_dashboard' %}" class="list-group-item list-group-item-action active">
+          <i class="bi bi-house-door"></i>
+          ダッシュボード
+        </a>
+        <a href="{% url 'schedule:admin_calendar' %}" class="list-group-item list-group-item-action">
+          <i class="bi bi-calendar3"></i>
+          シフト調整
+        </a>
+        <a href="{% url 'schedule:admin_staff' %}" class="list-group-item list-group-item-action">
+          <i class="bi bi-people"></i>
+          スタッフ管理
+        </a>
+        <a href="{% url 'schedule:admin_settings' %}" class="list-group-item list-group-item-action">
+          <i class="bi bi-gear"></i>
+          システム設定
+        </a>
+        <a href="{% url 'schedule:admin_reports' %}" class="list-group-item list-group-item-action">
+          <i class="bi bi-graph-up"></i>
+          レポート
+        </a>
+      </div>
+      
+      <hr>
+      
+      <div class="quick-actions">
+        <h6>クイックアクション</h6>
+        <button class="quick-action-btn btn-sm" onclick="exportToExcel()">
+          <i class="bi bi-file-earmark-excel"></i>
+          Excel出力
+        </button>
+        <button class="quick-action-btn btn-sm" onclick="sendNotifications()">
+          <i class="bi bi-bell"></i>
+          一斉通知
+        </button>
+        <button class="quick-action-btn btn-sm" onclick="backupData()">
+          <i class="bi bi-download"></i>
+          バックアップ
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- メインコンテンツ -->
+  <div class="col-lg-9">
+    <!-- 期間選択 -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-calendar-range"></i>
+          シフト作成期間の選択
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="get" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">対象期間</label>
+            <select class="form-select" name="period_id" onchange="this.form.submit()">
+              {% for period in available_periods %}
+                <option value="{{ period.id }}" {% if period.id == current_period.id %}selected{% endif %}>
+                  {{ period.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">ステータス</label>
+            <div class="mt-2">
+              {% if current_period.is_request_open %}
+                <span class="status-indicator status-active"></span>
+                希望提出期間中 (締切: {{ current_period.request_deadline|date:"n/j H:i" }})
+              {% else %}
+                <span class="status-indicator status-pending"></span>
+                希望提出締切済み
+              {% endif %}
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- 統計サマリー -->
+    <div class="row mb-4">
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.total_staff }}</div>
+          <div>総スタッフ数</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.submitted_requests }}</div>
+          <div>希望提出済み</div>
+          <small>{{ stats.total_staff }}人中</small>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.requirements_set }}</div>
+          <div>必要人数設定済み</div>
+          <small>{{ current_period.days_count }}日中</small>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+          <div class="stat-number">
+            {% if stats.completion_rate %}{{ stats.completion_rate }}%{% else %}0%{% endif %}
+          </div>
+          <div>完成度</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- AIスケジューラ -->
+    <div class="card ai-action-card mb-4">
+      <div class="card-body">
+        {% if ai_status.is_running %}
+          <div class="ai-status running">
+            <div class="d-flex align-items-center justify-content-center">
+              <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+              <strong>AIがシフトを作成中です...</strong>
+            </div>
+            <div class="progress mt-2">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                   style="width: {{ ai_status.progress }}%"></div>
+            </div>
+            <small class="d-block mt-1">推定残り時間: {{ ai_status.estimated_time }}分</small>
+          </div>
+        {% elif ai_status.last_result %}
+          <div class="ai-status {% if ai_status.last_result.success %}complete{% else %}error{% endif %}">
+            <h5>
+              <i class="bi bi-{% if ai_status.last_result.success %}check-circle{% else %}exclamation-triangle{% endif %}"></i>
+              {{ ai_status.last_result.message }}
+            </h5>
+            {% if ai_status.last_result.success %}
+              <p class="mb-0">
+                作成日時: {{ ai_status.last_result.created_at|date:"n/j H:i" }} | 
+                実行時間: {{ ai_status.last_result.execution_time }}秒 |
+                割り当て数: {{ ai_status.last_result.assignments_count }}件
+              </p>
+            {% endif %}
+          </div>
+        {% endif %}
+        
+        <div class="text-center">
+          <div class="progress-ring mb-3">
+            <svg>
+              <circle cx="60" cy="60" r="45"></circle>
+              <circle cx="60" cy="60" r="45" class="progress" 
+                      style="stroke-dashoffset: {{ stats.progress_offset }}"></circle>
+            </svg>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+              <strong style="font-size: 1.2rem;">{{ stats.completion_rate }}%</strong>
+            </div>
+          </div>
+          
+          <h4 class="mb-3">🤖 AIシフト自動作成</h4>
+          <p class="mb-4">
+            スタッフの希望と必要人数を基に、最適なシフトを自動で作成します。<br>
+            処理には数分かかる場合があります。
+          </p>
+          
+          <form method="post" id="aiForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="run_ai">
+            <input type="hidden" name="period_id" value="{{ current_period.id }}">
+            
+            {% if not ai_status.is_running %}
+              {% if stats.can_run_ai %}
+                <button type="submit" class="btn btn-light btn-lg" id="runAiBtn">
+                  <i class="bi bi-robot"></i>
+                  AIシフト自動作成を実行
+                </button>
+              {% else %}
+                <button type="button" class="btn btn-outline-light" disabled>
+                  <i class="bi bi-exclamation-triangle"></i>
+                  前提条件が不足しています
+                </button>
+                <div class="mt-2">
+                  <small>
+                    {% if not stats.has_requests %}希望提出が不足しています。{% endif %}
+                    {% if not stats.has_requirements %}必要人数設定が不足しています。{% endif %}
+                  </small>
+                </div>
+              {% endif %}
+            {% else %}
+              <button type="button" class="btn btn-outline-light" disabled>
+                <div class="spinner-border spinner-border-sm me-2"></div>
+                実行中...
+              </button>
+            {% endif %}
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 最近のアクティビティ -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="mb-0">
+              <i class="bi bi-clock-history"></i>
+              最近のアクティビティ
+            </h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+              {% for log in recent_logs %}
+                <div class="list-group-item">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">{{ log.get_action_display }}</h6>
+                    <small>{{ log.created_at|timesince }}前</small>
+                  </div>
+                  <p class="mb-1">{{ log.description }}</p>
+                  <small class="{% if log.success %}text-success{% else %}text-danger{% endif %}">
+                    <i class="bi bi-{% if log.success %}check-circle{% else %}x-circle{% endif %}"></i>
+                    {% if log.success %}成功{% else %}失敗{% endif %}
+                  </small>
+                </div>
+              {% empty %}
+                <div class="list-group-item text-center text-muted">
+                  アクティビティはありません
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="mb-0">
+              <i class="bi bi-exclamation-triangle"></i>
+              注意が必要な項目
+            </h6>
+          </div>
+          <div class="card-body">
+            {% if alerts %}
+              {% for alert in alerts %}
+                <div class="alert alert-{{ alert.level }} py-2" role="alert">
+                  <i class="bi bi-{{ alert.icon }}"></i>
+                  {{ alert.message }}
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="text-center text-muted">
+                <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                <p class="mt-2">問題はありません</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // AIフォーム送信時の処理
+  const aiForm = document.getElementById('aiForm');
+  const runAiBtn = document.getElementById('runAiBtn');
+  
+  if (aiForm) {
+    aiForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      if (confirm('AIシフト作成を実行しますか？\n※既存の割り当ては上書きされます。')) {
+        runAiBtn.disabled = true;
+        runAiBtn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>実行中...';
+        
+        fetch(aiForm.action || window.location.href, {
+          method: 'POST',
+          body: new FormData(aiForm),
+          headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // 成功時は自動でページをリロード
+            setTimeout(() => location.reload(), 2000);
+          } else {
+            alert('エラー: ' + data.message);
+            runAiBtn.disabled = false;
+            runAiBtn.innerHTML = '<i class="bi bi-robot"></i> AIシフト自動作成を実行';
+          }
+        })
+        .catch(error => {
+          alert('通信エラーが発生しました: ' + error.message);
+          runAiBtn.disabled = false;
+          runAiBtn.innerHTML = '<i class="bi bi-robot"></i> AIシフト自動作成を実行';
+        });
+      }
+    });
+  }
+  
+  // 進捗状況の定期更新（AI実行中の場合）
+  {% if ai_status.is_running %}
+    setInterval(function() {
+      fetch(window.location.href + '?ajax=1')
+        .then(response => response.json())
+        .then(data => {
+          if (data.ai_status) {
+            if (!data.ai_status.is_running) {
+              location.reload();
+            } else {
+              // 進捗状況の更新
+              const progressBar = document.querySelector('.progress-bar');
+              if (progressBar) {
+                progressBar.style.width = data.ai_status.progress + '%';
+              }
+            }
+          }
+        })
+        .catch(error => console.error('進捗取得エラー:', error));
+    }, 5000); // 5秒ごとに更新
+  {% endif %}
+});
+
+// クイックアクション関数
+function exportToExcel() {
+  if (confirm('現在のシフトをExcelファイルでダウンロードしますか？')) {
+    window.location.href = '{% url "schedule:export_excel" %}?period_id={{ current_period.id }}';
+  }
+}
+
+function sendNotifications() {
+  if (confirm('全スタッフにシフト確定通知を送信しますか？')) {
+    fetch('{% url "schedule:send_notifications" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        period_id: {{ current_period.id }},
+        notification_type: 'shift_finalized'
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('通知を送信しました。');
+      } else {
+        alert('エラー: ' + data.message);
+      }
+    });
+  }
+}
+
+function backupData() {
+  if (confirm('データベースのバックアップを作成しますか？')) {
+    window.location.href = '{% url "schedule:backup_data" %}';
+  }
+}
+</script>
+{% endblock %}

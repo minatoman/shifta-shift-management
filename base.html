@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>{% block title %}Shifta - スマートシフト管理{% endblock %}</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  
+  <!-- スマートフォン最適化のカスタムCSS -->
+  <style>
+    :root {
+      --primary-color: #0d6efd;
+      --success-color: #198754;
+      --danger-color: #dc3545;
+      --warning-color: #ffc107;
+      --info-color: #0dcaf0;
+      --light-color: #f8f9fa;
+      --dark-color: #212529;
+    }
+
+    body {
+      background-color: var(--light-color);
+      font-family: 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN W3', Meiryo, メイリオ, Osaka, 'MS PGothic', arial, helvetica, sans-serif;
+      line-height: 1.6;
+      padding-bottom: 80px; /* フッターナビゲーション用の余白 */
+    }
+
+    /* スマートフォン用ヘッダー */
+    .mobile-header {
+      background: linear-gradient(135deg, var(--primary-color), #0056b3);
+      color: white;
+      padding: 1rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .mobile-header h1 {
+      font-size: 1.5rem;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    /* カード要素の強化 */
+    .card {
+      border: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .card-header {
+      background: linear-gradient(45deg, var(--primary-color), #0056b3);
+      color: white;
+      border-radius: 12px 12px 0 0 !important;
+      font-weight: 600;
+    }
+
+    /* ボタンのタップ最適化 */
+    .btn {
+      min-height: 44px; /* iOS推奨のタップターゲットサイズ */
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    /* リスト要素の最適化 */
+    .list-group-item {
+      border: none;
+      margin-bottom: 0.5rem;
+      border-radius: 8px !important;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 1rem;
+    }
+
+    /* フォーム要素の最適化 */
+    .form-control, .form-select {
+      min-height: 44px;
+      border-radius: 8px;
+      border: 2px solid #e9ecef;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+    /* アラート要素 */
+    .alert {
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+
+    /* ボトムナビゲーション（スマートフォン用） */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid #e9ecef;
+      padding: 0.5rem 0;
+      z-index: 1000;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+
+    .bottom-nav .nav-link {
+      color: #6c757d;
+      text-align: center;
+      padding: 0.5rem;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .bottom-nav .nav-link.active {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+
+    .bottom-nav .nav-link i {
+      display: block;
+      font-size: 1.2rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .bottom-nav .nav-link span {
+      font-size: 0.7rem;
+      display: block;
+    }
+
+    /* タブ要素の強化 */
+    .nav-pills .nav-link {
+      border-radius: 20px;
+      margin: 0 0.25rem;
+      font-weight: 500;
+    }
+
+    .nav-pills .nav-link.active {
+      background-color: var(--primary-color);
+    }
+
+    /* バッジの最適化 */
+    .badge {
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.4rem 0.6rem;
+      border-radius: 20px;
+    }
+
+    /* ローディング状態 */
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .spinner-border-sm {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    /* メディアクエリ：PC表示時の調整 */
+    @media (min-width: 768px) {
+      body {
+        padding-bottom: 0;
+      }
+      
+      .bottom-nav {
+        display: none;
+      }
+      
+      .container {
+        max-width: 800px;
+      }
+    }
+
+    /* ダークモード対応の準備 */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #1a1a1a;
+        color: #ffffff;
+      }
+      
+      .card {
+        background-color: #2d2d2d;
+        color: #ffffff;
+      }
+      
+      .list-group-item {
+        background-color: #2d2d2d;
+        color: #ffffff;
+      }
+    }
+
+    /* アニメーション */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    /* プルツーリフレッシュ対応 */
+    .pull-to-refresh {
+      text-align: center;
+      padding: 1rem;
+      color: var(--primary-color);
+      font-weight: 600;
+      display: none;
+    }
+
+    .pull-to-refresh.active {
+      display: block;
+    }
+  </style>
+  
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <!-- プルツーリフレッシュ表示 -->
+  <div class="pull-to-refresh" id="pullToRefresh">
+    <i class="bi bi-arrow-clockwise"></i>
+    <span>データを更新中...</span>
+  </div>
+
+  <!-- スマートフォン用ヘッダー -->
+  <header class="mobile-header d-md-none">
+    <div class="container">
+      <div class="d-flex align-items-center justify-content-between">
+        <h1>
+          <i class="bi bi-calendar-check"></i>
+          {% block header_title %}Shifta{% endblock %}
+        </h1>
+        <div class="header-actions">
+          {% block header_actions %}
+          <button class="btn btn-link text-white" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+          {% endblock %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="container my-3">
+    <!-- メッセージ表示エリア -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show fade-in" role="alert">
+          {% if message.tags == 'error' %}
+            <i class="bi bi-exclamation-triangle-fill"></i>
+          {% elif message.tags == 'success' %}
+            <i class="bi bi-check-circle-fill"></i>
+          {% elif message.tags == 'warning' %}
+            <i class="bi bi-exclamation-circle-fill"></i>
+          {% else %}
+            <i class="bi bi-info-circle-fill"></i>
+          {% endif %}
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- ページコンテンツ -->
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- スマートフォン用ボトムナビゲーション -->
+  <nav class="bottom-nav d-md-none">
+    <div class="container">
+      <div class="row">
+        <div class="col-3">
+          <a href="{% url 'schedule:my_schedule' %}" class="nav-link {% if request.resolver_match.url_name == 'my_schedule' %}active{% endif %}">
+            <i class="bi bi-calendar-week"></i>
+            <span>マイシフト</span>
+          </a>
+        </div>
+        <div class="col-3">
+          <a href="{% url 'schedule:shift_request' %}" class="nav-link {% if request.resolver_match.url_name == 'shift_request' %}active{% endif %}">
+            <i class="bi bi-calendar-plus"></i>
+            <span>希望提出</span>
+          </a>
+        </div>
+        <div class="col-3">
+          <a href="{% url 'schedule:holiday_balance' %}" class="nav-link {% if request.resolver_match.url_name == 'holiday_balance' %}active{% endif %}">
+            <i class="bi bi-clock-history"></i>
+            <span>休日残数</span>
+          </a>
+        </div>
+        <div class="col-3">
+          <a href="{% url 'schedule:profile' %}" class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+            <i class="bi bi-person-circle"></i>
+            <span>設定</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Bootstrap JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- 共通JavaScript -->
+  <script>
+    // プルツーリフレッシュ機能
+    let startY = 0;
+    let isPulling = false;
+    
+    document.addEventListener('touchstart', function(e) {
+      startY = e.touches[0].clientY;
+    });
+    
+    document.addEventListener('touchmove', function(e) {
+      const currentY = e.touches[0].clientY;
+      const pullDistance = currentY - startY;
+      
+      if (pullDistance > 100 && window.scrollY === 0 && !isPulling) {
+        isPulling = true;
+        document.getElementById('pullToRefresh').classList.add('active');
+      }
+    });
+    
+    document.addEventListener('touchend', function(e) {
+      if (isPulling) {
+        setTimeout(() => {
+          location.reload();
+        }, 500);
+      }
+    });
+
+    // タップフィードバック
+    document.addEventListener('touchstart', function(e) {
+      if (e.target.closest('.btn, .list-group-item, .nav-link')) {
+        e.target.closest('.btn, .list-group-item, .nav-link').style.transform = 'scale(0.98)';
+      }
+    });
+    
+    document.addEventListener('touchend', function(e) {
+      if (e.target.closest('.btn, .list-group-item, .nav-link')) {
+        setTimeout(() => {
+          e.target.closest('.btn, .list-group-item, .nav-link').style.transform = '';
+        }, 150);
+      }
+    });
+
+    // オンライン/オフライン状態の監視
+    window.addEventListener('online', function() {
+      if (document.querySelector('.offline-notice')) {
+        document.querySelector('.offline-notice').remove();
+        location.reload();
+      }
+    });
+    
+    window.addEventListener('offline', function() {
+      const notice = document.createElement('div');
+      notice.className = 'alert alert-warning offline-notice';
+      notice.innerHTML = '<i class="bi bi-wifi-off"></i> オフラインです。一部機能が制限されます。';
+      document.querySelector('main').prepend(notice);
+    });
+
+    // 自動保存機能（フォーム用）
+    function enableAutoSave(formSelector) {
+      const form = document.querySelector(formSelector);
+      if (form) {
+        const inputs = form.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+          input.addEventListener('change', function() {
+            const data = new FormData(form);
+            localStorage.setItem('autoSave_' + form.id, JSON.stringify(Object.fromEntries(data)));
+          });
+        });
+        
+        // ページロード時の復元
+        const saved = localStorage.getItem('autoSave_' + form.id);
+        if (saved) {
+          const data = JSON.parse(saved);
+          Object.entries(data).forEach(([key, value]) => {
+            const input = form.querySelector(`[name="${key}"]`);
+            if (input) input.value = value;
+          });
+        }
+      }
+    }
+
+    // エラーハンドリング
+    window.addEventListener('error', function(e) {
+      console.error('JavaScript Error:', e.error);
+      // 本番環境では適切なエラー報告サービスに送信
+    });
+
+    // パフォーマンス最適化：遅延読み込み
+    function lazyLoadImages() {
+      const images = document.querySelectorAll('img[data-src]');
+      const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+            observer.unobserve(img);
+          }
+        });
+      });
+      
+      images.forEach(img => imageObserver.observe(img));
+    }
+    
+    document.addEventListener('DOMContentLoaded', lazyLoadImages);
+  </script>
+  
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
