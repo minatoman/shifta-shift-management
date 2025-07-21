@@ -1,0 +1,535 @@
+<!-- schedule/templates/staff/holiday_request.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}休暇申請 | Shifta{% endblock %}
+
+{% block extra_css %}
+<style>
+    .holiday-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+    }
+    
+    .balance-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .balance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+    
+    .balance-item {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+    }
+    
+    .balance-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .balance-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .balance-paid { border-color: #28a745; }
+    .balance-paid .balance-value { color: #28a745; }
+    
+    .balance-special { border-color: #17a2b8; }
+    .balance-special .balance-value { color: #17a2b8; }
+    
+    .request-form {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .holiday-type-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .holiday-type-item {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .holiday-type-item:hover {
+        border-color: #28a745;
+    }
+    
+    .holiday-type-item.selected {
+        border-color: #28a745;
+        background: rgba(40, 167, 69, 0.1);
+    }
+    
+    .holiday-type-item input[type="radio"] {
+        display: none;
+    }
+    
+    .holiday-type-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        color: white;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .holiday-type-info {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .date-range-selector {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .date-input {
+        flex: 1;
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 1.1rem;
+    }
+    
+    .date-input:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+    }
+    
+    .days-count {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .days-count-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #28a745;
+    }
+    
+    .reason-input {
+        width: 100%;
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+        resize: vertical;
+    }
+    
+    .reason-input:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+    }
+    
+    .submit-btn {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-weight: 600;
+        color: white;
+        width: 100%;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+    }
+    
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+    }
+    
+    .submit-btn:disabled {
+        background: #6c757d;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .request-history {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .history-item:last-child {
+        border-bottom: none;
+    }
+    
+    .history-date {
+        font-weight: 600;
+    }
+    
+    .history-type {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d1f2eb; color: #155724; }
+    .status-rejected { background: #f8d7da; color: #721c24; }
+    
+    @media (max-width: 768px) {
+        .holiday-header {
+            padding: 1.5rem 0;
+            margin-bottom: 1rem;
+        }
+        
+        .date-range-selector {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .holiday-type-selector {
+            grid-template-columns: 1fr;
+        }
+        
+        .balance-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .history-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="holiday-header">
+    <div class="container">
+        <div class="text-center">
+            <h1><i class="bi bi-calendar-x me-2"></i>休暇申請</h1>
+            <p class="mb-0">有給休暇・特別休暇の申請ができます</p>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- 休暇残数表示 -->
+    <div class="balance-card">
+        <h4 class="mb-3"><i class="bi bi-calendar-check me-2"></i>休暇残数</h4>
+        <div class="balance-grid">
+            {% for balance in holiday_balances %}
+                <div class="balance-item balance-{{ balance.holiday_type.name|slugify }}">
+                    <div class="balance-value">{{ balance.remaining_days }}</div>
+                    <div class="balance-label">{{ balance.holiday_type.name }}<br>残り日数</div>
+                </div>
+            {% empty %}
+                <div class="text-center text-muted">
+                    <i class="bi bi-info-circle me-2"></i>
+                    休暇残数データがありません
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 申請フォーム -->
+    <div class="request-form">
+        <h4 class="mb-3"><i class="bi bi-plus-circle me-2"></i>新規申請</h4>
+        
+        <form method="post" id="holiday-request-form">
+            {% csrf_token %}
+            
+            <!-- 休暇種別選択 -->
+            <div class="mb-3">
+                <label class="form-label">休暇種別</label>
+                <div class="holiday-type-selector">
+                    {% for holiday_type in holiday_types %}
+                        <div class="holiday-type-item" data-type="{{ holiday_type.id }}">
+                            <input type="radio" 
+                                   id="type_{{ holiday_type.id }}" 
+                                   name="holiday_type"
+                                   value="{{ holiday_type.id }}"
+                                   data-annual-days="{{ holiday_type.annual_days }}"
+                                   data-requires-approval="{{ holiday_type.requires_approval|yesno:'true,false' }}">
+                            <label for="type_{{ holiday_type.id }}">
+                                <div class="holiday-type-badge" 
+                                     style="background-color: {{ holiday_type.color }};">
+                                    {{ holiday_type.name }}
+                                </div>
+                                <div class="holiday-type-info">
+                                    年間{{ holiday_type.annual_days }}日
+                                    {% if holiday_type.is_paid %}(有給){% else %}(無給){% endif %}
+                                </div>
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- 期間選択 -->
+            <div class="mb-3">
+                <label class="form-label">申請期間</label>
+                <div class="date-range-selector">
+                    <input type="date" 
+                           class="date-input" 
+                           id="start_date" 
+                           name="start_date"
+                           min="{{ today|date:'Y-m-d' }}"
+                           required>
+                    <div>〜</div>
+                    <input type="date" 
+                           class="date-input" 
+                           id="end_date" 
+                           name="end_date"
+                           min="{{ today|date:'Y-m-d' }}"
+                           required>
+                </div>
+            </div>
+            
+            <!-- 日数表示 -->
+            <div class="days-count" id="days-count" style="display: none;">
+                <div class="days-count-value" id="days-value">0</div>
+                <div>申請日数</div>
+            </div>
+            
+            <!-- 理由入力 -->
+            <div class="mb-3">
+                <label for="reason" class="form-label">申請理由</label>
+                <textarea class="reason-input" 
+                          id="reason" 
+                          name="reason" 
+                          rows="3" 
+                          placeholder="休暇の理由を入力してください（任意）"></textarea>
+            </div>
+            
+            <!-- 承認必要性の表示 -->
+            <div class="alert alert-info" id="approval-info" style="display: none;">
+                <i class="bi bi-info-circle me-2"></i>
+                この休暇種別は管理者の承認が必要です。
+            </div>
+            
+            <!-- 申請ボタン -->
+            <button type="submit" class="submit-btn" id="submit-btn" disabled>
+                <i class="bi bi-send me-2"></i>申請を送信
+            </button>
+        </form>
+    </div>
+    
+    <!-- 申請履歴 -->
+    <div class="request-history">
+        <h4 class="mb-3"><i class="bi bi-clock-history me-2"></i>申請履歴</h4>
+        
+        {% if holiday_requests %}
+            {% for request in holiday_requests %}
+                <div class="history-item">
+                    <div>
+                        <div class="history-date">
+                            {{ request.start_date|date:'Y/m/d' }} 〜 {{ request.end_date|date:'Y/m/d' }}
+                        </div>
+                        <div class="history-type">
+                            {{ request.holiday_type.name }}
+                            ({{ request.days_count }}日間)
+                        </div>
+                    </div>
+                    <div>
+                        <span class="status-badge status-{{ request.status }}">
+                            {% if request.status == 'pending' %}承認待ち
+                            {% elif request.status == 'approved' %}承認済み
+                            {% elif request.status == 'rejected' %}却下
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-inbox me-2"></i>
+                申請履歴はありません
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('holiday-request-form');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const daysCountDiv = document.getElementById('days-count');
+    const daysValueDiv = document.getElementById('days-value');
+    const submitBtn = document.getElementById('submit-btn');
+    const approvalInfo = document.getElementById('approval-info');
+    
+    // 休暇種別選択
+    document.querySelectorAll('.holiday-type-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            
+            // 他の選択を解除
+            document.querySelectorAll('.holiday-type-item').forEach(i => {
+                i.classList.remove('selected');
+            });
+            this.classList.add('selected');
+            
+            // 承認必要性の表示
+            const requiresApproval = radio.dataset.requiresApproval === 'true';
+            approvalInfo.style.display = requiresApproval ? 'block' : 'none';
+            
+            validateForm();
+        });
+    });
+    
+    // 日付変更時の処理
+    function updateDaysCount() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (startDate && endDate && startDate <= endDate) {
+            const timeDiff = endDate - startDate;
+            const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+            
+            daysValueDiv.textContent = daysDiff;
+            daysCountDiv.style.display = 'block';
+            
+            return daysDiff;
+        } else {
+            daysCountDiv.style.display = 'none';
+            return 0;
+        }
+    }
+    
+    function validateForm() {
+        const selectedType = document.querySelector('input[name="holiday_type"]:checked');
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const daysCount = updateDaysCount();
+        
+        let isValid = selectedType && startDate && endDate && daysCount > 0;
+        
+        // 残日数チェック
+        if (isValid && selectedType) {
+            const selectedTypeId = selectedType.value;
+            const balanceElement = document.querySelector(`[data-type-id="${selectedTypeId}"]`);
+            if (balanceElement) {
+                const remainingDays = parseInt(balanceElement.dataset.remainingDays);
+                if (daysCount > remainingDays) {
+                    isValid = false;
+                    showAlert('申請日数が残日数を超えています', 'warning');
+                }
+            }
+        }
+        
+        submitBtn.disabled = !isValid;
+    }
+    
+    startDateInput.addEventListener('change', function() {
+        // 終了日の最小値を開始日に設定
+        endDateInput.min = this.value;
+        if (endDateInput.value && endDateInput.value < this.value) {
+            endDateInput.value = this.value;
+        }
+        validateForm();
+    });
+    
+    endDateInput.addEventListener('change', validateForm);
+    
+    // フォーム送信
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitButton = document.getElementById('submit-btn');
+        
+        // ボタンを無効化
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>送信中...';
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('休暇申請を送信しました', 'success');
+                form.reset();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showAlert(data.error || '申請の送信に失敗しました', 'danger');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="bi bi-send me-2"></i>申請を送信';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('通信エラーが発生しました', 'danger');
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="bi bi-send me-2"></i>申請を送信';
+        });
+    });
+});
+
+function showAlert(message, type = 'info') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.querySelector('.container').insertBefore(alert, document.querySelector('.balance-card'));
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

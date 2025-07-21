@@ -1,0 +1,511 @@
+<!-- schedule/templates/staff/profile.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}プロフィール設定 | Shifta{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+    }
+    
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin: 0 auto 1rem;
+    }
+    
+    .profile-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border: none;
+    }
+    
+    .profile-section-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .profile-section-icon {
+        font-size: 1.2rem;
+        margin-right: 0.5rem;
+        color: #667eea;
+    }
+    
+    .preference-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .preference-item {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .preference-item.selected {
+        border-color: #667eea;
+        background: rgba(102, 126, 234, 0.1);
+    }
+    
+    .preference-item input[type="checkbox"] {
+        display: none;
+    }
+    
+    .preference-item label {
+        display: block;
+        cursor: pointer;
+        margin: 0;
+        font-weight: 500;
+    }
+    
+    .job-type-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        color: white;
+        font-weight: 500;
+        margin: 0.25rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .job-type-badge:hover {
+        transform: scale(1.05);
+    }
+    
+    .time-input-group {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .time-input {
+        flex: 1;
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        text-align: center;
+    }
+    
+    .time-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .days-selector {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .day-btn {
+        aspect-ratio: 1;
+        border: 2px solid #e9ecef;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .day-btn.selected {
+        background: #667eea;
+        border-color: #667eea;
+        color: white;
+    }
+    
+    .day-btn input[type="checkbox"] {
+        display: none;
+    }
+    
+    .save-btn {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-weight: 600;
+        color: white;
+        width: 100%;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+    }
+    
+    .save-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+    }
+    
+    @media (max-width: 768px) {
+        .profile-header {
+            padding: 1.5rem 0;
+            margin-bottom: 1rem;
+        }
+        
+        .profile-card {
+            margin-bottom: 0.5rem;
+            padding: 1rem;
+        }
+        
+        .time-input-group {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .preference-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+    <div class="container">
+        <div class="text-center">
+            <div class="profile-avatar">
+                <i class="bi bi-person-fill"></i>
+            </div>
+            <h2>{{ user.last_name }} {{ user.first_name }}</h2>
+            <p class="mb-0">@{{ user.username }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- プロフィール統計 -->
+    <div class="profile-card">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value">{{ profile.max_hours_per_week|default:"--" }}</div>
+                <div class="stat-label">週間最大時間</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ profile.max_consecutive_days|default:"--" }}</div>
+                <div class="stat-label">最大連続日数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ profile.preferred_job_types.count }}</div>
+                <div class="stat-label">希望職種数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ profile.available_days.count }}</div>
+                <div class="stat-label">勤務可能日</div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="profile-form">
+        {% csrf_token %}
+        
+        <!-- 基本情報 -->
+        <div class="profile-card">
+            <div class="profile-section-header">
+                <i class="bi bi-telephone profile-section-icon"></i>
+                連絡先情報
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_phone_number" class="form-label">電話番号</label>
+                <input type="tel" 
+                       class="form-control mobile-input" 
+                       id="id_phone_number" 
+                       name="phone_number"
+                       value="{{ profile.phone_number|default:'' }}"
+                       placeholder="090-1234-5678">
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_emergency_contact" class="form-label">緊急連絡先</label>
+                <input type="tel" 
+                       class="form-control mobile-input" 
+                       id="id_emergency_contact" 
+                       name="emergency_contact"
+                       value="{{ profile.emergency_contact|default:'' }}"
+                       placeholder="緊急時の連絡先">
+            </div>
+        </div>
+
+        <!-- 勤務設定 -->
+        <div class="profile-card">
+            <div class="profile-section-header">
+                <i class="bi bi-gear profile-section-icon"></i>
+                勤務設定
+            </div>
+            
+            <div class="mb-3">
+                <label for="id_work_style" class="form-label">勤務スタイル</label>
+                <select class="form-select mobile-input" id="id_work_style" name="work_style">
+                    <option value="">選択してください</option>
+                    {% for style in work_styles %}
+                        <option value="{{ style.id }}" 
+                                {% if profile.work_style.id == style.id %}selected{% endif %}>
+                            {{ style.name }} (週{{ style.weekly_hours }}時間)
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="id_max_hours_per_week" class="form-label">週間最大時間</label>
+                    <input type="number" 
+                           class="form-control mobile-input" 
+                           id="id_max_hours_per_week" 
+                           name="max_hours_per_week"
+                           value="{{ profile.max_hours_per_week|default:'' }}"
+                           min="1" max="168">
+                </div>
+                <div class="col-md-4">
+                    <label for="id_max_consecutive_days" class="form-label">最大連続日数</label>
+                    <input type="number" 
+                           class="form-control mobile-input" 
+                           id="id_max_consecutive_days" 
+                           name="max_consecutive_days"
+                           value="{{ profile.max_consecutive_days|default:'' }}"
+                           min="1" max="31">
+                </div>
+                <div class="col-md-4">
+                    <label for="id_min_rest_hours" class="form-label">最小休憩時間</label>
+                    <input type="number" 
+                           class="form-control mobile-input" 
+                           id="id_min_rest_hours" 
+                           name="min_rest_hours"
+                           value="{{ profile.min_rest_hours|default:'' }}"
+                           min="1" max="24">
+                </div>
+            </div>
+        </div>
+
+        <!-- 希望職種 -->
+        <div class="profile-card">
+            <div class="profile-section-header">
+                <i class="bi bi-briefcase profile-section-icon"></i>
+                希望職種
+            </div>
+            
+            <div class="preference-grid">
+                {% for job_type in job_types %}
+                    <div class="preference-item" data-job-type="{{ job_type.id }}">
+                        <input type="checkbox" 
+                               id="job_type_{{ job_type.id }}" 
+                               name="preferred_job_types"
+                               value="{{ job_type.id }}"
+                               {% if job_type in profile.preferred_job_types.all %}checked{% endif %}>
+                        <label for="job_type_{{ job_type.id }}">
+                            <div class="job-type-badge" style="background-color: {{ job_type.color }};">
+                                {{ job_type.name }}
+                            </div>
+                            <div class="mt-2">
+                                <small>{{ job_type.start_time }} - {{ job_type.end_time }}</small>
+                            </div>
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 勤務可能日 -->
+        <div class="profile-card">
+            <div class="profile-section-header">
+                <i class="bi bi-calendar-week profile-section-icon"></i>
+                勤務可能日
+            </div>
+            
+            <div class="days-selector">
+                {% for day in weekdays %}
+                    <div class="day-btn" data-day="{{ day.value }}">
+                        <input type="checkbox" 
+                               id="day_{{ day.value }}" 
+                               name="available_days"
+                               value="{{ day.value }}"
+                               {% if day.value in profile.available_days %}checked{% endif %}>
+                        <label for="day_{{ day.value }}">{{ day.label }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 希望時間 -->
+        <div class="profile-card">
+            <div class="profile-section-header">
+                <i class="bi bi-clock profile-section-icon"></i>
+                希望時間帯
+            </div>
+            
+            <div class="time-input-group">
+                <div>
+                    <label for="id_preferred_start_time" class="form-label">開始時刻</label>
+                    <input type="time" 
+                           class="time-input" 
+                           id="id_preferred_start_time" 
+                           name="preferred_start_time"
+                           value="{{ profile.preferred_start_time|time:'H:i'|default:'' }}">
+                </div>
+                <div class="text-center">〜</div>
+                <div>
+                    <label for="id_preferred_end_time" class="form-label">終了時刻</label>
+                    <input type="time" 
+                           class="time-input" 
+                           id="id_preferred_end_time" 
+                           name="preferred_end_time"
+                           value="{{ profile.preferred_end_time|time:'H:i'|default:'' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- 備考 -->
+        <div class="profile-card">
+            <div class="profile-section-header">
+                <i class="bi bi-chat-text profile-section-icon"></i>
+                備考・特記事項
+            </div>
+            
+            <textarea class="form-control mobile-input" 
+                      name="notes" 
+                      rows="3" 
+                      placeholder="アレルギー、持病、その他の特記事項があれば入力してください">{{ profile.notes|default:'' }}</textarea>
+        </div>
+
+        <!-- 保存ボタン -->
+        <div class="mb-4">
+            <button type="submit" class="save-btn">
+                <i class="bi bi-check-circle me-2"></i>設定を保存
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 職種選択の動的更新
+    document.querySelectorAll('.preference-item').forEach(item => {
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        
+        if (checkbox.checked) {
+            item.classList.add('selected');
+        }
+        
+        item.addEventListener('click', function() {
+            checkbox.checked = !checkbox.checked;
+            item.classList.toggle('selected', checkbox.checked);
+        });
+    });
+    
+    // 曜日選択の動的更新
+    document.querySelectorAll('.day-btn').forEach(btn => {
+        const checkbox = btn.querySelector('input[type="checkbox"]');
+        
+        if (checkbox.checked) {
+            btn.classList.add('selected');
+        }
+        
+        btn.addEventListener('click', function() {
+            checkbox.checked = !checkbox.checked;
+            btn.classList.toggle('selected', checkbox.checked);
+        });
+    });
+    
+    // フォーム自動保存
+    let saveTimeout;
+    document.getElementById('profile-form').addEventListener('change', function() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            const formData = new FormData(this);
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('設定が自動保存されました', 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Auto-save error:', error);
+            });
+        }, 2000);
+    });
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}
